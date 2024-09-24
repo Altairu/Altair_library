@@ -6,8 +6,8 @@
 class MotorDriver {
 public:
     MotorDriver(PinName ps1Pin, PinName ps2Pin) : ps1(ps1Pin), ps2(ps2Pin) {
-        ps1.period(0.001f); // PWM周期を1msに設定
-        ps2.period(0.001f); // PWM周期を1msに設定
+        ps1.period(0.0001f); // PWM周期を0.1msに設定
+        ps2.period(0.0001f); // PWM周期を0.1msに設定
     }
 
     void setSpeed(int speed) {
