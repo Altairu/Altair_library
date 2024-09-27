@@ -122,3 +122,125 @@ build_flags =
     -D MBED_MINIMAL_PRINTF_ENABLE_FLOATING_POINT
     -D MBED_MINIMAL_PRINTF_ENABLE_64_BIT
 ```
+
+### STM32F446RE マイコン側のサンプルコード (`main.cpp`)
+
+このコードは、STM32側で3つの`float`データを送信し、PC側からのデータを受信します。
+
+```cpp
+#include "mbed.h"
+#include "AltairSerial.h"
+
+// AltairSerialをUSB_Aモードでボーレート115200bpsで初期化
+AltairSerial altair(USB_A, 115200);
+
+int main() {
+    // 送信するfloatデータ
+    float dataToSend[] = {1.23f, 4.56f, 7.89f};
+    int dataLength = sizeof(dataToSend) / sizeof(float);
+
+    // データ送信
+    printf("Sending data to PC...\n");
+    altair.sendFloatArrayWithHeader(dataToSend, dataLength);
+
+    // 受信するバッファ
+    float receivedData[3];
+    int receivedLength = 3;
+
+    // データをPCから受信
+    printf("Waiting for data from PC...\n");
+    altair.receiveFloatArrayWithHeader(receivedData, receivedLength);
+
+    // 受信したデータを表示
+    printf("Received data from PC:\n");
+    for (int i = 0; i < receivedLength; i++) {
+        printf("Received float: %f\n", receivedData[i]);
+    }
+
+    while (true) {
+        // メインループ
+    }
+}
+```
+
+### PC側（Python）のサンプルコード
+
+このPythonコードは、STM32側からの`float`データを受信し、PC側から`float`データをSTM32に送信します。
+
+```python
+import serial
+import struct
+import time
+
+# シリアルポートの設定（ポートは環境に合わせて変更）
+port = '/dev/ttyACM0'  # Windowsの場合は 'COM3' のように指定
+baud_rate = 115200
+ser = serial.Serial(port, baud_rate, timeout=1)
+
+# STM32からfloat配列を受信
+def receive_float_array():
+    while True:
+        # ヘッダー 0xA5 を待つ
+        if ser.read(1) == b'\xA5':
+            # データ長を受信
+            length = ser.read(1)
+            if length:
+                length = struct.unpack('B', length)[0]  # 1バイト（unsigned char）として長さを取得
+                # float データを受信
+                data = []
+                for _ in range(length):
+                    float_bytes = ser.read(4)
+                    if len(float_bytes) == 4:
+                        value = struct.unpack('f', float_bytes)[0]
+                        data.append(value)
+                return data
+
+# PCからSTM32にfloat配列を送信
+def send_float_array(data):
+    header = b'\xA5'  # ヘッダー
+    ser.write(header)  # ヘッダー送信
+    length = len(data)
+    ser.write(struct.pack('B', length))  # 配列の長さを送信
+    for value in data:
+        ser.write(struct.pack('f', value))  # 各floatを送信
+
+if __name__ == "__main__":
+    # STM32からデータを受信
+    print("Waiting for data from STM32...")
+    received_data = receive_float_array()
+    print("Received float array from STM32:", received_data)
+
+    # 1秒待機
+    time.sleep(1)
+
+    # PCからSTM32にデータを送信
+    data_to_send = [9.87, 6.54, 3.21]
+    print("Sending data to STM32:", data_to_send)
+    send_float_array(data_to_send)
+```
+
+### 説明
+
+- **STM32側 (`main.cpp`)**:
+  - `AltairSerial`ライブラリを使って、`float`型の配列データを送信します。
+  - 同時にPCからの`float`データを受信して、受信内容をシリアルモニターに表示します。
+  
+- **PC側（Python）**:
+  - STM32から送られてくる`float`型データを受信して表示します。
+  - その後、別の`float`型データをSTM32に送信します。
+
+### 実行手順
+
+1. **STM32マイコン側**：
+   - `main.cpp`をコンパイルし、STM32F446REに書き込みます。
+   - デバッグ用に、PlatformIOのシリアルモニターを起動することをお勧めします。
+
+2. **PC側（Python）**：
+   - Pythonスクリプトを実行し、STM32からデータを受信し、その後データを送信します。
+   - 必要に応じてシリアルポートを変更してください（例: `COM3` や `/dev/ttyACM0`）。
+
+### 動作確認
+
+1. STM32側からPCにデータが送信され、Pythonプログラムがそのデータを受信して表示します。
+2. PythonプログラムがデータをSTM32に送信し、STM32側で受信してデータが表示されます。
+
