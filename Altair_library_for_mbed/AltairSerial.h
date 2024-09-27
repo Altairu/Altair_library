@@ -17,10 +17,10 @@ public:
                 serial = new BufferedSerial(PA_9, PA_10, baudRate);
                 break;
             case USB_B:
-                serial = new BufferedSerial(PC_10, PC_11, baudRate);
+                serial = new BufferedSerial(PC_11, PC_10, baudRate);
                 break;
             case USB_MiniB:
-                serial = new BufferedSerial(PA_2, PA_3, baudRate);
+                serial = new BufferedSerial(USBTX, USBRX, baudRate);
                 break;
         }
     }
