@@ -12,7 +12,8 @@
 #include "Servo.h"
 #include "TwoWheelKinematics.h"
 #include "Kinematics.h"
-#include "robot_control.h" 
+#include "robot_control.h"
 #include "InverseKinematics.h"
+#include "incenc.h"
 
 #endif // ALTAIRLIBRARY_H
