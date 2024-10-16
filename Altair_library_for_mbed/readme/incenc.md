@@ -1,138 +1,199 @@
-# incenc ライブラリ（推奨）
 
-エンコーダー用ライブラリ　
+## エンコーダーライブラリの使用方法
 
-### 特徴
+### 概要
 
-- **カウント取得**: エンコーダーのカウント値を取得できます。
-- **角度計算**: エンコーダーの回転角度（degrees）を計算します。
-- **RPS（回転数毎秒）計算**: エンコーダーの回転数を秒単位で取得できます。
-- **エンコーダーデータのリセット**: 必要に応じてエンコーダーのカウントをリセットできます。
+このライブラリは、STM32 Nucleoボード上でエンコーダーの読み取りを簡単に実行できるようにするためのものです。エンコーダーのカウント、角度、RPS（回転数）、距離などのデータを取得し、リセットする機能を提供します。
 
----
+### 対応するエンコーダー設定
 
-### 対応しているタイマーとピンセット
+以下のタイマーとピン設定を使用します:
 
-| タイマー | ピン A   | ピン B   |
-|:---------|:---------|:---------|
-| TIM5     | PA_0     | PA_1     |
-| TIM2     | PB_3     | PA_5     |
-| TIM3     | PC_6     | PC_7     |
-| TIM4     | PB_6     | PB_7     |
+- **TIM2**: PB_3 (CH1), PA_5 (CH2)
+- **TIM3**: PC_6 (CH1), PC_7 (CH2)
+- **TIM4**: PB_6 (CH1), PB_7 (CH2)
+
+**注意**: TIM5 (PA_0, PA_1) は使用できません。
 
 ---
 
-### インストール方法
+### 使用方法
 
-1. このリポジトリをクローンまたはダウンロードして、Mbedプロジェクトに追加してください。
-2. `incenc.h`と`incenc.cpp`をプロジェクトに追加します。
+1. **ライブラリの初期化**
 
----
-
-### 使い方
-
-#### 1. 初期化
-
-エンコーダーを使用するためには、まず初期化を行います。`init()`関数を使用して、指定したタイマーとピンに対してエンコーダーをセットアップします。
+各エンコーダーを初期化します。以下の例は、TIM2、TIM3、TIM4に接続されたエンコーダーを初期化するコードです。
 
 ```cpp
 #include "mbed.h"
 #include "incenc.h"
 
-IncEnc encoder;
-IncEncData data;
+IncEnc encoder1, encoder2, encoder3;
+IncEncData data1, data2, data3;
 
 int main() {
-   
-    encoder.init(init(PB_3, PA_5, TIM2);
+    // 各エンコーダーの初期化
+    encoder1.init(PB_3, PA_5, TIM2);  // TIM2 (PB_3, PA_5)
+    encoder2.init(PC_6, PC_7, TIM3);  // TIM3 (PC_6, PC_7)
+    encoder3.init(PB_6, PB_7, TIM4);  // TIM4 (PB_6, PB_7)
 
     while (true) {
-        // エンコーダーデータの更新
-        encoder.interrupt(TIM2, &data);
+        // エンコーダーデータの取得
+        encoder1.getEncoderData(TIM2, &data1);
+        encoder2.getEncoderData(TIM3, &data2);
+        encoder3.getEncoderData(TIM4, &data3);
 
-        // 角度とRPSの取得
-        double angle = encoder.get_degrees(&data);
-        double rps = encoder.get_rps(&data);
+        // 結果の表示
+        printf("Encoder1 (TIM2): Count = %d, RPS = %.2f, Degree = %.2f, Distance = %.2f\n",
+               data1.count, data1.rps, data1.deg, data1.distance);
+        printf("Encoder2 (TIM3): Count = %d, RPS = %.2f, Degree = %.2f, Distance = %.2f\n",
+               data2.count, data2.rps, data2.deg, data2.distance);
+        printf("Encoder3 (TIM4): Count = %d, RPS = %.2f, Degree = %.2f, Distance = %.2f\n",
+               data3.count, data3.rps, data3.deg, data3.distance);
 
-        // 結果を表示
-        printf("角度: %.2f 度, RPS: %.2f\n", angle, rps);
-
-        ThisThread::sleep_for(1000ms);  // 1秒ごとに表示
+        ThisThread::sleep_for(1000ms);  // 1秒ごとにデータを表示
     }
 }
 ```
 
-使用例
+2. **エンコーダーデータの取得**
+
+各エンコーダーからカウントやRPS、角度、距離のデータを取得するためには、`getEncoderData()`関数を使用します。
+
 ```cpp
-    encoder1.init(PA_0, PA_1, TIM5);  // TIM5 (PA_0, PA_1) 使用不可
-    encoder2.init(PB_3, PA_5, TIM2);  // TIM2 (PB_3, PA_5)
-    encoder3.init(PC_6, PC_7, TIM3);  // TIM3 (PC_6, PC_7)
-    encoder4.init(PB_6, PB_7, TIM4);  // TIM4 (PB_6, PB_7)
+encoder1.getEncoderData(TIM2, &data1);
 ```
 
+この関数は、以下のようなデータを`IncEncData`構造体に格納します。
 
-#### 2. 関数説明
+- `count`: カウント値
+- `rps`: 回転数 (RPS)
+- `deg`: 角度 (度)
+- `distance`: 回転距離
 
-- **`init(PinName a_pin, PinName b_pin, TIM_TypeDef *tim, double diameter = 100, int ppr = 8192, int period = 1)`**
-  - エンコーダーの初期化を行います。
-  - `a_pin`: エンコーダーA相のピン。
-  - `b_pin`: エンコーダーB相のピン。
-  - `tim`: 使用するタイマー (`TIM2`, `TIM3`, `TIM4`, `TIM5`のいずれか)。
-  - `diameter`: エンコーダーのホイール径 (mm)。デフォルトは100。
-  - `ppr`: パルス数（1回転あたりのパルス数）。デフォルトは8192。
-  - `period`: サンプリング期間（ms単位）。デフォルトは1ms。
+3. **エンコーダーのリセット**
 
-- **`read(TIM_TypeDef *tim)`**
-  - エンコーダーのカウント値を取得します。
-  - `tim`: 読み取るタイマー。
+エンコーダーのカウントをリセットするには、`reset()`関数を使用します。
 
-- **`interrupt(TIM_TypeDef *tim, IncEncData *encoder_data)`**
-  - エンコーダーデータを更新します。回転数や角度の計算も行います。
+```cpp
+encoder1.reset(TIM2);
+```
 
-- **`reset(TIM_TypeDef *tim)`**
-  - エンコーダーのカウントをリセットします。
+この関数は、指定したエンコーダーのカウントを0にリセットします。
 
-- **`get_degrees(IncEncData *encoder_data)`**
-  - 回転角度（degrees）を取得します。
+---
+取得方法を具体的に説明します。エンコーダーデータの各値（カウント、RPS、角度、回転距離）の取得手順について説明します。
 
-- **`get_rps(IncEncData *encoder_data)`**
-  - RPS（回転数毎秒）を取得します。
+### 各データの取得方法
+
+エンコーダーデータを取得するには、次の手順で`getEncoderData()`を使用します。
+
+1. **カウント値 (`count`)**
+   - エンコーダーの現在のカウント値は、`getEncoderData()`で取得されます。
+   - `IncEncData`構造体の`count`メンバにカウント値が格納されます。
+
+   ```cpp
+   encoder.getEncoderData(TIM2, &data1);
+   printf("カウント値 = %d\n", data1.count);
+   ```
+
+2. **回転数 (RPS)**
+   - `getEncoderData()`を呼び出すと、`IncEncData`構造体の`rps`メンバにRPS（1秒あたりの回転数）が格納されます。
+
+   ```cpp
+   encoder.getEncoderData(TIM2, &data1);
+   printf("RPS = %.2f\n", data1.rps);
+   ```
+
+3. **角度 (`deg`)**
+   - エンコーダーの回転軸が何度回転したか（0°～360°）は、`IncEncData`構造体の`deg`メンバに格納されます。
+
+   ```cpp
+   encoder.getEncoderData(TIM2, &data1);
+   printf("角度 (度) = %.2f\n", data1.deg);
+   ```
+
+4. **回転距離 (`distance`)**
+   - 回転軸やホイールが回転によって移動した距離は、`IncEncData`構造体の`distance`メンバに格納されます。
+
+   ```cpp
+   encoder.getEncoderData(TIM2, &data1);
+   printf("回転距離 = %.2fmm\n", data1.distance);
+   ```
 
 ---
 
-### サンプルコード
+### コード例
 
-以下は、複数のエンコーダーを同時に読み取るサンプルコードです。
+以下のコードは、エンコーダーからデータを取得する具体例です。`TIM2`を使って、カウント値、RPS、角度、回転距離を1秒ごとに取得・表示します。
 
 ```cpp
 #include "mbed.h"
 #include "incenc.h"
 
-IncEnc encoder1, encoder2, encoder3, encoder4;
-IncEncData data1, data2, data3, data4;
+IncEnc encoder1;
+IncEncData data1;
 
 int main() {
-    // エンコーダーの初期化
-    encoder1.init(PA_0, PA_1, TIM5);  // TIM5 (PA_0, PA_1)
-    encoder2.init(PB_3, PA_5, TIM2);  // TIM2 (PB_3, PA_5)
-    encoder3.init(PC_6, PC_7, TIM3);  // TIM3 (PC_6, PC_7)
-    encoder4.init(PB_6, PB_7, TIM4);  // TIM4 (PB_6, PB_7)
+    // エンコーダーの初期化 (例: TIM2)
+    encoder1.init(PB_3, PA_5, TIM2);
 
     while (true) {
-        // 各エンコーダーのデータを更新
-        encoder1.interrupt(TIM5, &data1);
-        encoder2.interrupt(TIM2, &data2);
-        encoder3.interrupt(TIM3, &data3);
-        encoder4.interrupt(TIM4, &data4);
+        // エンコーダーデータの取得
+        encoder1.getEncoderData(TIM2, &data1);
 
-        // 各エンコーダーの結果を表示
-        printf("TIM5: 角度 = %.2f 度, RPS = %.2f\n", encoder1.get_degrees(&data1), encoder1.get_rps(&data1));
-        printf("TIM2: 角度 = %.2f 度, RPS = %.2f\n", encoder2.get_degrees(&data2), encoder2.get_rps(&data2));
-        printf("TIM3: 角度 = %.2f 度, RPS = %.2f\n", encoder3.get_degrees(&data3), encoder3.get_rps(&data3));
-        printf("TIM4: 角度 = %.2f 度, RPS = %.2f\n", encoder4.get_degrees(&data4), encoder4.get_rps(&data4));
+        // 各値を表示
+        printf("カウント値 = %d\n", data1.count);
+        printf("RPS = %.2f\n", data1.rps);
+        printf("角度 (度) = %.2f\n", data1.deg);
+        printf("回転距離 = %.2fmm\n", data1.distance);
 
-        ThisThread::sleep_for(1000ms);  // 1秒ごとに表示
+        ThisThread::sleep_for(1000ms);  // 1秒ごとにデータを表示
     }
 }
 ```
 
+### リセット方法
+
+エンコーダーのカウント値をリセットしたい場合は、`reset()`関数を使用します。これにより、エンコーダーのカウントが0にリセットされます。
+
+```cpp
+encoder1.reset(TIM2);  // TIM2エンコーダーのカウントをリセット
+```
+
+
+---
+
+### 開発環境
+
+- **プラットフォーム**: STM32 Nucleo F446RE
+- **フレームワーク**: Mbed OS
+- **コンパイラ**: PlatformIO
+
+### ビルド手順
+
+1. `platformio.ini` ファイルに以下の設定を追加して、Mbed OSを使用します。
+
+```ini
+[env:nucleo_f446re]
+platform = ststm32
+board = nucleo_f446re
+framework = mbed
+build_flags = 
+    -DMBED_CONF_TARGET_DEFAULT_TICKER_TIMER=9
+    -DMBED_TICKLESS
+```
+
+2. コードをビルドし、Nucleoボードに書き込みます。
+
+```bash
+pio run --target upload
+```
+
+3. シリアルモニタを使用して、出力結果を確認します。
+
+---
+
+### 注意事項
+
+- **TIM5 (PA_0, PA_1) は使用できません**。そのため、他のタイマーでエンコーダーを設定してください。
+- 各エンコーダーは専用のタイマーを使用する必要があります。同じタイマーで複数のエンコーダーを読み取ることはできません。

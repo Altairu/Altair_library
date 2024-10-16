@@ -21,7 +21,48 @@ void IncEnc::init(PinName a_pin, PinName b_pin, TIM_TypeDef *tim, double diamete
         __HAL_RCC_TIM5_CLK_ENABLE();
     }
 
-    // タイマーとエンコーダー設定
+    // GPIOの設定
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = (1 << (a_pin & 0xF)) | (1 << (b_pin & 0xF));
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+
+    if (tim == TIM2 || tim == TIM5)
+    {
+        if (a_pin == PA_5 || b_pin == PA_5)
+        {
+            __HAL_RCC_GPIOA_CLK_ENABLE();
+            GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
+            HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+        }
+        if (a_pin == PB_3 || b_pin == PB_3)
+        {
+            __HAL_RCC_GPIOB_CLK_ENABLE();
+            GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;
+            HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+        }
+    }
+    else if (tim == TIM3)
+    {
+        __HAL_RCC_GPIOC_CLK_ENABLE();
+        GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
+        HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    }
+    else if (tim == TIM4)
+    {
+        __HAL_RCC_GPIOB_CLK_ENABLE();
+        GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
+        HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+    }
+    else if (tim == TIM5)
+    {
+        __HAL_RCC_GPIOA_CLK_ENABLE();
+        GPIO_InitStruct.Alternate = GPIO_AF2_TIM5;
+        HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    }
+
+    // タイマーの初期化
     encoder_handle_.Instance = tim;
     encoder_handle_.Init.Prescaler = 0;
     encoder_handle_.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -41,6 +82,7 @@ void IncEnc::init(PinName a_pin, PinName b_pin, TIM_TypeDef *tim, double diamete
     HAL_TIM_Encoder_Init(&encoder_handle_, &encoder_init_);
     HAL_TIM_Encoder_Start(&encoder_handle_, TIM_CHANNEL_ALL);
 
+    // カウンタの初期化
     tim->CNT = 30000;
 
     diameter_ = diameter;
@@ -50,52 +92,28 @@ void IncEnc::init(PinName a_pin, PinName b_pin, TIM_TypeDef *tim, double diamete
     before_rot_ = 0;
 }
 
-int IncEnc::read(TIM_TypeDef *tim)
+int IncEnc::getCount(TIM_TypeDef *tim)
 {
     return (tim->CNT) - 30000;
 }
 
-void IncEnc::interrupt(TIM_TypeDef *tim, IncEncData *encoder_data)
+void IncEnc::getEncoderData(TIM_TypeDef *tim, IncEncData *encoder_data)
 {
-    int count = read(tim);
-    if (count >= 20000 || count <= -20000)
-    {
-        if (count >= 20000)
-        {
-            limit_++;
-        }
-        else
-        {
-            limit_--;
-        }
-        reset(tim);
-    }
-    encoder_data->count = read(tim) + limit_ * 20000;
+    int count = getCount(tim);
+    encoder_data->count = count;
 
-    // 回転数と角度を計算
     encoder_data->rot = (encoder_data->count) / (double)ppr_;
     encoder_data->deg = encoder_data->rot * 360.0;
-    encoder_data->distance = encoder_data->rot * (3.14159 * diameter_);
+    encoder_data->distance = encoder_data->rot * (3.14159265359 * diameter_);
 
-    // RPSを計算
     encoder_data->rps = (encoder_data->rot - before_rot_) / ((double)period_ * 0.001);
     before_rot_ = encoder_data->rot;
-
-    // 速度を計算
-    encoder_data->velocity = encoder_data->rps * 3.14159 * diameter_;
+    encoder_data->velocity = encoder_data->rps * 3.14159265359 * diameter_;
 }
 
 void IncEnc::reset(TIM_TypeDef *tim)
 {
     tim->CNT = 30000;
-}
-
-double IncEnc::get_degrees(IncEncData *encoder_data)
-{
-    return encoder_data->deg;
-}
-
-double IncEnc::get_rps(IncEncData *encoder_data)
-{
-    return encoder_data->rps;
+    limit_ = 0;
+    before_rot_ = 0;
 }
