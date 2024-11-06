@@ -1,5 +1,7 @@
 #include "encoder.h"
 
+#define TIMER_MAX_COUNT 65535  // タイマーの最大値（16ビットタイマーの場合）
+
 void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef* htim, double diameter, int ppr, int period)
 {
     encoder->htim = htim;
@@ -11,7 +13,7 @@ void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef* htim, double diameter, in
 
     encoder->htim->Init.Prescaler = 0;
     encoder->htim->Init.CounterMode = TIM_COUNTERMODE_UP;
-    encoder->htim->Init.Period = 65535;
+    encoder->htim->Init.Period = TIMER_MAX_COUNT;
     encoder->htim->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 
     TIM_Encoder_InitTypeDef encoder_init;
@@ -27,12 +29,13 @@ void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef* htim, double diameter, in
 
     HAL_TIM_Encoder_Init(htim, &encoder_init);
     HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL);
-    __HAL_TIM_SET_COUNTER(htim, 0);  // 初期値をゼロに設定
+    __HAL_TIM_SET_COUNTER(htim, TIMER_MAX_COUNT / 2);  // カウンタを中央に設定
 }
 
 int Encoder_Read(Encoder* encoder)
 {
-    return __HAL_TIM_GET_COUNTER(encoder->htim);
+    int16_t count = (int16_t)(__HAL_TIM_GET_COUNTER(encoder->htim) - TIMER_MAX_COUNT / 2);
+    return count;
 }
 
 void Encoder_Interrupt(Encoder* encoder, EncoderData* encoder_data)
@@ -52,5 +55,5 @@ void Encoder_Interrupt(Encoder* encoder, EncoderData* encoder_data)
 
 void Encoder_Reset(Encoder* encoder)
 {
-    __HAL_TIM_SET_COUNTER(encoder->htim, 0);
+    __HAL_TIM_SET_COUNTER(encoder->htim, TIMER_MAX_COUNT / 2);  // カウンタを中央にリセット
 }
