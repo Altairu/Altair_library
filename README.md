@@ -1,2 +1,2 @@
 # Altair_library
-PlatformIO用ライブラリ
+PlatformIO(mbed,Arduino),CubeIEDに対応
