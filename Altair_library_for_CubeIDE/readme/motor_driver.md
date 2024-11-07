@@ -1,134 +1,121 @@
 # Motor Driver Library Documentation
 
-`motor_driver.h`および`motor_driver.c`は、STM32マイコンを用いてDCモーターの速度と回転方向をPWM信号で制御するためのライブラリです。このライブラリは、PWM出力を利用してモーターに必要な電圧や回転方向を設定し、正転、逆転、および速度調整を行います。
+## 概要
+この`motor_driver`ライブラリは、STM32マイコンを使用してDCモーターをPWM制御するためのライブラリです。タイマーのチャンネルを使用してモーターの正転と逆転、速度を制御することができます。
 
-## ファイル構成
+## 初期設定と前提条件
 
-- `motor_driver.h`: モータードライバライブラリのインターフェースを定義。
-- `motor_driver.c`: ライブラリの実装を提供。
+### ハードウェア設定
+- モーターはSTM32のGPIOピンとタイマーによるPWM制御を使って駆動します。
+- 各モーターには2つのPWM出力が必要です（正転と逆転用）。
+- 必要に応じて、`htim`および`TIM_CHANNEL_x`の設定を合わせます。
 
-## 機能
-
-- モーターの初期化
-- モーターの回転速度と方向の制御
-- モーターの停止
-
-## 構造体
-
-### MotorDriver
-
-`MotorDriver`は、PWM信号でモーターを制御するために必要な情報を保持する構造体です。
-
+### 必要なヘッダー
 ```c
-typedef struct {
-    TIM_HandleTypeDef *htim; // PWM用タイマーのハンドル
-    uint32_t channel1;       // PWM出力のチャネル1
-    uint32_t channel2;       // PWM出力のチャネル2
-} MotorDriver;
+#include "motor_driver.h"
 ```
 
-- `htim`: モーター制御に使用するタイマーのハンドル。
-- `channel1`: 正転に使用するPWMチャネル。
-- `channel2`: 逆転に使用するPWMチャネル。
-
-## 関数
+## `motor_driver.h` - 関数リスト
 
 ### MotorDriver_Init
 
+**説明**  
+指定されたタイマーおよびチャンネルを用いてモータードライバを初期化します。
+
+**宣言**
 ```c
-void MotorDriver_Init(MotorDriver *motor, TIM_HandleTypeDef *htim, uint32_t channel1, uint32_t channel2);
+void MotorDriver_Init(MotorDriver *motor, TIM_HandleTypeDef *htimA, uint32_t channelA, TIM_HandleTypeDef *htimB, uint32_t channelB);
 ```
 
-#### 説明
-モーターの初期化を行います。この関数は、PWMチャネルを使用してモーターの回転方向と速度を制御するために必要な設定を行います。
+**パラメータ**
+- `motor`: 初期化するモーターの構造体ポインタ。
+- `htimA`: 正転用PWM出力のタイマー構造体。
+- `channelA`: 正転用PWM出力のタイマーチャンネル。
+- `htimB`: 逆転用PWM出力のタイマー構造体。
+- `channelB`: 逆転用PWM出力のタイマーチャンネル。
 
-#### パラメータ
-- `motor`: 初期化するモータードライバ構造体へのポインタ。
-- `htim`: 使用するタイマーのハンドル。
-- `channel1`: 正転用PWMチャネル。
-- `channel2`: 逆転用PWMチャネル。
-
-#### 使用例
+**使用例**
 ```c
 MotorDriver motor;
-MotorDriver_Init(&motor, &htim3, TIM_CHANNEL_1, TIM_CHANNEL_2);
+MotorDriver_Init(&motor, &htim13, TIM_CHANNEL_1, &htim14, TIM_CHANNEL_1);
 ```
-
----
 
 ### MotorDriver_setSpeed
 
+**説明**  
+指定された速度でモーターを回転させます。速度はパーセントで指定し、負の値は逆回転を示します。
+
+**宣言**
 ```c
 void MotorDriver_setSpeed(MotorDriver *motor, int speed);
 ```
 
-#### 説明
-モーターの回転速度と方向を設定します。正の速度で正転、負の速度で逆転、0で停止させます。
+**パラメータ**
+- `motor`: 設定するモーターの構造体ポインタ。
+- `speed`: -100〜100の範囲で指定。正の値で正転、負の値で逆転。
 
-#### パラメータ
-- `motor`: 制御するモータードライバ構造体へのポインタ。
-- `speed`: モーターの回転速度（範囲 -100 ～ 100）。
-
-#### 使用例
+**使用例**
 ```c
-// モーターを50%の速度で正転
-MotorDriver_setSpeed(&motor, 50);
-
-// モーターを50%の速度で逆転
-MotorDriver_setSpeed(&motor, -50);
-
-// モーターを停止
-MotorDriver_setSpeed(&motor, 0);
+MotorDriver_setSpeed(&motor, 50);  // 50%速度で正転
+MotorDriver_setSpeed(&motor, -50); // 50%速度で逆転
 ```
+
+## `motor_driver.c` - 実装の概要
+
+### 構造体
+
+```c
+typedef struct {
+    TIM_HandleTypeDef *htimA;
+    uint32_t channelA;
+    TIM_HandleTypeDef *htimB;
+    uint32_t channelB;
+} MotorDriver;
+```
+
+### MotorDriver_Init
+
+この関数は、指定されたタイマーとチャンネルを使ってモーターを初期化します。正転と逆転用のチャンネルを分けることで、モーターの方向を簡単に制御できます。
+
+### MotorDriver_setSpeed
+
+指定したパーセンテージでPWM信号を出力し、モーターの速度と方向を制御します。関数は`speed`の値が正の場合は`htimA`と`channelA`にPWMを出力し、負の場合は`htimB`と`channelB`に出力します。
+
+- `speed`が0の場合、両方のチャンネルが0に設定され、モーターは停止します。
+
+### エラーハンドリング
+`Error_Handler()`を利用して、初期化やPWM出力でエラーが発生した場合のデバッグを支援します。
 
 ---
 
-## 使用方法
+## 使用例
 
-### 初期設定
+### モーター単体テストコード
 
-1. `motor_driver.h`と`motor_driver.c`をプロジェクトに追加します。
-2. 使用するPWM用のタイマーをSTM32CubeMXで設定し、チャネルを選択してPWMモードに設定します。
-3. コード内で`MotorDriver`構造体を宣言し、`MotorDriver_Init`関数で初期化します。
-
-### モーターの速度制御
-
-`MotorDriver_setSpeed`関数を用いて、モーターの速度と回転方向を指定します。`speed`パラメータに正の値を設定すると正転、負の値で逆転、0で停止します。
-
-### 使用例
-
-以下に、基本的な初期化と制御の使用例を示します。
+以下のコードは、モーターが2秒間正転し、1秒停止し、2秒間逆転する動作を繰り返します。
 
 ```c
 #include "motor_driver.h"
 
-int main(void)
-{
-    // 初期化コード（HAL初期化、クロック設定、タイマー初期化など）
+MotorDriver motor;
+MotorDriver_Init(&motor, &htim13, TIM_CHANNEL_1, &htim14, TIM_CHANNEL_1);
 
-    MotorDriver motor;
-    MotorDriver_Init(&motor, &htim3, TIM_CHANNEL_1, TIM_CHANNEL_2);
+while (1) {
+    MotorDriver_setSpeed(&motor, 50);  // 50%速度で正転
+    HAL_Delay(2000);                   // 2秒待機
 
-    while (1) {
-        // 50%の速度で正転
-        MotorDriver_setSpeed(&motor, 50);
-        HAL_Delay(2000);  // 2秒待機
+    MotorDriver_setSpeed(&motor, 0);   // 停止
+    HAL_Delay(1000);                   // 1秒待機
 
-        // 停止
-        MotorDriver_setSpeed(&motor, 0);
-        HAL_Delay(1000);  // 1秒待機
+    MotorDriver_setSpeed(&motor, -50); // 50%速度で逆転
+    HAL_Delay(2000);                   // 2秒待機
 
-        // 50%の速度で逆転
-        MotorDriver_setSpeed(&motor, -50);
-        HAL_Delay(2000);  // 2秒待機
-
-        // 停止
-        MotorDriver_setSpeed(&motor, 0);
-        HAL_Delay(1000);  // 1秒待機
-    }
+    MotorDriver_setSpeed(&motor, 0);   // 停止
+    HAL_Delay(1000);                   // 1秒待機
 }
 ```
 
-## 注意事項
-
-- PWM周期に気をつけてください。
+### トラブルシューティング
+- **モーターが動作しない場合**: 
+  - `htimA`、`htimB`の設定が正しいことを確認します。
+  - PWM出力の設定が正しく、クロックが有効になっていることを確認します。

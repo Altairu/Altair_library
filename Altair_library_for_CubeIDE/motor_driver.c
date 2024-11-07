@@ -1,30 +1,31 @@
 #include "motor_driver.h"
 
 // 初期化関数
-void MotorDriver_Init(MotorDriver *motor, TIM_HandleTypeDef *htim, uint32_t channel1, uint32_t channel2) {
-    motor->htim = htim;
-    motor->channel1 = channel1;
-    motor->channel2 = channel2;
+void MotorDriver_Init(MotorDriver* motor, TIM_HandleTypeDef* htimA, uint32_t channelA,
+                      TIM_HandleTypeDef* htimB, uint32_t channelB) {
+    motor->htimA = htimA;
+    motor->channelA = channelA;
+    motor->htimB = htimB;
+    motor->channelB = channelB;
 
-    HAL_TIM_PWM_Start(htim, channel1);
-    HAL_TIM_PWM_Start(htim, channel2);
+    // PWM開始
+    HAL_TIM_PWM_Start(htimA, channelA);
+    HAL_TIM_PWM_Start(htimB, channelB);
 }
 
 // 速度設定関数
 void MotorDriver_setSpeed(MotorDriver *motor, int speed) {
+	int pwm_value;
     if (speed > 100) speed = 99;
     if (speed < -100) speed = -99;
 
     if (speed > 0) {
-        int pwm_value = (speed * __HAL_TIM_GET_AUTORELOAD(motor->htim)) / 100;
-        __HAL_TIM_SET_COMPARE(motor->htim, motor->channel1, pwm_value);
-        __HAL_TIM_SET_COMPARE(motor->htim, motor->channel2, 0);
-    } else if (speed < 0) {
-        int pwm_value = (-speed * __HAL_TIM_GET_AUTORELOAD(motor->htim)) / 100;
-        __HAL_TIM_SET_COMPARE(motor->htim, motor->channel1, 0);
-        __HAL_TIM_SET_COMPARE(motor->htim, motor->channel2, pwm_value);
+        pwm_value = (speed * __HAL_TIM_GET_AUTORELOAD(motor->htimA)) / 100;
+        __HAL_TIM_SET_COMPARE(motor->htimA, motor->channelA, pwm_value);
+        __HAL_TIM_SET_COMPARE(motor->htimB, motor->channelB, 0);
     } else {
-        __HAL_TIM_SET_COMPARE(motor->htim, motor->channel1, 0);
-        __HAL_TIM_SET_COMPARE(motor->htim, motor->channel2, 0);
+        pwm_value = (-speed * __HAL_TIM_GET_AUTORELOAD(motor->htimA)) / 100;
+        __HAL_TIM_SET_COMPARE(motor->htimA, motor->channelA, 0);
+        __HAL_TIM_SET_COMPARE(motor->htimB, motor->channelB, pwm_value);
     }
 }

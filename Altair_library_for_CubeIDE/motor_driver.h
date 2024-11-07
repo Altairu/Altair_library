@@ -2,19 +2,19 @@
 #define MOTOR_DRIVER_H
 
 #include "stm32f4xx_hal.h"
-#include "stm32f4xx_hal_tim.h" // TIM_HandleTypeDefのためのインクルード
 
-// MotorDriver構造体の定義
 typedef struct {
-    TIM_HandleTypeDef *htim;
-    uint32_t channel1;
-    uint32_t channel2;
+    TIM_HandleTypeDef* htimA;  // タイマーA
+    uint32_t channelA;         // タイマーチャンネルA
+    TIM_HandleTypeDef* htimB;  // タイマーB
+    uint32_t channelB;         // タイマーチャンネルB
 } MotorDriver;
 
-// MotorDriverの初期化
-void MotorDriver_Init(MotorDriver *motor, TIM_HandleTypeDef *htim, uint32_t channel1, uint32_t channel2);
+// モータードライバを初期化する関数
+void MotorDriver_Init(MotorDriver* motor, TIM_HandleTypeDef* htimA, uint32_t channelA,
+                      TIM_HandleTypeDef* htimB, uint32_t channelB);
 
-// モーターの速度設定関数
-void MotorDriver_setSpeed(MotorDriver *motor, int speed);
+// モーターの速度を設定する関数
+void MotorDriver_setSpeed(MotorDriver* motor, int speed);
 
-#endif // MOTOR_DRIVER_H
+#endif /* MOTOR_DRIVER_H */
