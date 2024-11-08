@@ -1,38 +1,42 @@
 #include "serial_lib.h"
+#include <stdlib.h>
 
 // シリアル通信の初期化
 void Serial_Init(UART_HandleTypeDef *huart) {
     HAL_UART_Init(huart);
 }
 
-// データ送信関数: 3つの16ビット整数データをヘッダーと共に送信
-void Serial_SendData(UART_HandleTypeDef *huart, int16_t data1, int16_t data2, int16_t data3) {
-    uint8_t buffer[8];
+// 可変長データの送信関数
+void Serial_SendData(UART_HandleTypeDef *huart, int16_t *data, uint8_t data_count) {
+    uint8_t buffer_size = 2 + data_count * 2;
+    uint8_t *buffer = (uint8_t *)malloc(buffer_size);
+
     buffer[0] = SERIAL_HEADER1;
     buffer[1] = SERIAL_HEADER2;
-    buffer[2] = (data1 >> 8) & 0xFF;
-    buffer[3] = data1 & 0xFF;
-    buffer[4] = (data2 >> 8) & 0xFF;
-    buffer[5] = data2 & 0xFF;
-    buffer[6] = (data3 >> 8) & 0xFF;
-    buffer[7] = data3 & 0xFF;
 
-    HAL_UART_Transmit(huart, buffer, 8, HAL_MAX_DELAY);
+    for (uint8_t i = 0; i < data_count; i++) {
+        buffer[2 + i * 2] = (data[i] >> 8) & 0xFF;
+        buffer[3 + i * 2] = data[i] & 0xFF;
+    }
+
+    HAL_UART_Transmit(huart, buffer, buffer_size, HAL_MAX_DELAY);
+    free(buffer);
 }
 
-// データ受信関数: ヘッダー確認後に3つのデータを受信
-uint8_t Serial_ReceiveData(UART_HandleTypeDef *huart, int16_t *data1, int16_t *data2, int16_t *data3) {
-    uint8_t buffer[8];
+// 可変長データの受信関数
+uint8_t Serial_ReceiveData(UART_HandleTypeDef *huart, int16_t *data, uint8_t data_count) {
+    uint8_t buffer_size = 2 + data_count * 2;
+    uint8_t *buffer = (uint8_t *)malloc(buffer_size);
 
-    // 8バイトの受信: ヘッダー2バイト + データ6バイト
-    if (HAL_UART_Receive(huart, buffer, 8, HAL_MAX_DELAY) == HAL_OK) {
-        // ヘッダー確認
+    if (HAL_UART_Receive(huart, buffer, buffer_size, HAL_MAX_DELAY) == HAL_OK) {
         if (buffer[0] == SERIAL_HEADER1 && buffer[1] == SERIAL_HEADER2) {
-            *data1 = (buffer[2] << 8) | buffer[3];
-            *data2 = (buffer[4] << 8) | buffer[5];
-            *data3 = (buffer[6] << 8) | buffer[7];
+            for (uint8_t i = 0; i < data_count; i++) {
+                data[i] = (buffer[2 + i * 2] << 8) | buffer[3 + i * 2];
+            }
+            free(buffer);
             return 1; // 正常受信
         }
     }
+    free(buffer);
     return 0; // エラー
 }
