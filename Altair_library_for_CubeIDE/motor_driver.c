@@ -4,6 +4,20 @@
 void MotorDriver_Init(MotorDriver* motor, TIM_HandleTypeDef* htimA, uint32_t channelA,
                       TIM_HandleTypeDef* htimB, uint32_t channelB) {
     motor->htimA = htimA;
+/*
+motor->htimA = htimA;
+motor は MotorDriver 型のポインタ。
+motor->htimA は MotorDriver 構造体のメンバ変数 htimA を指す。
+htimA は関数の引数で渡された TIM_HandleTypeDef* 型の変数。
+motor->htimA = htimA; は htimA のポインタ値を motor->htimA に代入する。
+
+-> は 構造体ポインタが指すメンバにアクセスする 演算子。
+MotorDriver 構造体のメンバを関数外でも参照・操作できるようにするために、ポインタを渡している。
+htimA や htimB は タイマハンドルのポインタ なので、直接コピーするとアドレスが共有される（実体のコピーではない）。
+channelA や channelB は 数値データ（uint32_t） なので、値がコピーされる。
+
+関数の引数から受け取ったポインタと数値を構造体のメンバ変数に代入して、後で使えるようにする処理
+*/
     motor->channelA = channelA;
     motor->htimB = htimB;
     motor->channelB = channelB;
