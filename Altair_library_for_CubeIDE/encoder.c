@@ -1,8 +1,9 @@
 #include "encoder.h"
 
-#define TIMER_MAX_COUNT 65535  // タイマーの最大値（16ビットタイマーの場合）
+uint32_t lastTime = 0; // 初期値を定数に設定
 
-void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef* htim, double diameter, int ppr, int period)
+#define TIMER_MAX_COUNT 131070 * 4                                                                 // タイマーの最大値（16ビットタイマーの場合65535)
+void Encoder_Init(Encoder *encoder, TIM_HandleTypeDef *htim, double diameter, int ppr, int period) // periodはms
 {
     encoder->htim = htim;
     encoder->ppr = ppr;
@@ -10,6 +11,7 @@ void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef* htim, double diameter, in
     encoder->period = period;
     encoder->limit = 0;
     encoder->before_rot = 0.0;
+    encoder->before_deg = 0.0;
 
     encoder->htim->Init.Prescaler = 0;
     encoder->htim->Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -29,16 +31,16 @@ void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef* htim, double diameter, in
 
     HAL_TIM_Encoder_Init(htim, &encoder_init);
     HAL_TIM_Encoder_Start(htim, TIM_CHANNEL_ALL);
-    __HAL_TIM_SET_COUNTER(htim, TIMER_MAX_COUNT / 2);  // カウンタを中央に設定
+    __HAL_TIM_SET_COUNTER(htim, TIMER_MAX_COUNT / 2); // カウンタを中央に設定
 }
 
-int Encoder_Read(Encoder* encoder)
+int Encoder_Read(Encoder *encoder)
 {
     int16_t count = (int16_t)(__HAL_TIM_GET_COUNTER(encoder->htim) - TIMER_MAX_COUNT / 2);
     return count;
 }
 
-void Encoder_Interrupt(Encoder* encoder, EncoderData* encoder_data)
+void Encoder_Interrupt(Encoder *encoder, EncoderData *encoder_data)
 {
     int count = Encoder_Read(encoder);
 
@@ -46,14 +48,19 @@ void Encoder_Interrupt(Encoder* encoder, EncoderData* encoder_data)
     encoder_data->rot = count / (double)encoder->ppr;
     encoder_data->deg = encoder_data->rot * 360.0;
     encoder_data->distance = encoder_data->rot * (PI * encoder->diameter);
-
-    encoder_data->rps = (encoder_data->rot - encoder->before_rot) / (encoder->period * 0.001);
     encoder_data->velocity = encoder_data->rps * PI * encoder->diameter;
 
-    encoder->before_rot = encoder_data->rot;
+    if (HAL_GetTick() - lastTime >= encoder->period)
+    {
+        lastTime = HAL_GetTick();
+        encoder_data->rps = (encoder_data->rot - encoder->before_rot) * 1000 / (encoder->period);
+
+        encoder->before_rot = encoder_data->rot;
+        encoder->before_deg = encoder_data->deg;
+    }
 }
 
-void Encoder_Reset(Encoder* encoder)
+void Encoder_Reset(Encoder *encoder)
 {
-    __HAL_TIM_SET_COUNTER(encoder->htim, TIMER_MAX_COUNT / 2);  // カウンタを中央にリセット
+    __HAL_TIM_SET_COUNTER(encoder->htim, TIMER_MAX_COUNT / 2); // カウンタを中央にリセット
 }
