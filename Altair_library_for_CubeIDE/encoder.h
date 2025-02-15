@@ -8,7 +8,7 @@
 
 typedef struct
 {
-    int count;
+    long int count;
     double rot;
     double deg;
     double distance;

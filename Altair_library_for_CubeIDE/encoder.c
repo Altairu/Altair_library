@@ -1,8 +1,9 @@
 #include "encoder.h"
+#include "serial_lib.h"
 
 uint32_t lastTime = 0; // 初期値を定数に設定
 
-#define TIMER_MAX_COUNT 131070 * 4                                                                 // タイマーの最大値（16ビットタイマーの場合65535)
+#define TIMER_MAX_COUNT 65535                                                                      // タイマーの最大値（16ビットタイマーの場合65535)
 void Encoder_Init(Encoder *encoder, TIM_HandleTypeDef *htim, double diameter, int ppr, int period) // periodはms
 {
     encoder->htim = htim;
@@ -42,10 +43,22 @@ int Encoder_Read(Encoder *encoder)
 
 void Encoder_Interrupt(Encoder *encoder, EncoderData *encoder_data)
 {
-    int count = Encoder_Read(encoder);
 
-    encoder_data->count = count;
-    encoder_data->rot = count / (double)encoder->ppr;
+    if (Encoder_Read(encoder) >= 20000 || Encoder_Read(encoder) <= -20000)
+    {
+        if (Encoder_Read(encoder) >= 20000)
+        {
+            encoder->limit++;
+        }
+        else
+        {
+            encoder->limit--;
+        }
+        Encoder_Reset(encoder);
+    }
+
+    encoder_data->count = Encoder_Read(encoder) + encoder->limit * 20000;
+    encoder_data->rot = encoder_data->count / (double)encoder->ppr;
     encoder_data->deg = encoder_data->rot * 360.0;
     encoder_data->distance = encoder_data->rot * (PI * encoder->diameter);
     encoder_data->velocity = encoder_data->rps * PI * encoder->diameter;
