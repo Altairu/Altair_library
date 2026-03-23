@@ -4,14 +4,14 @@ STM32CubeIDE (CMake プロジェクト) 向けライブラリです。
 
 ## 含まれるライブラリ
 
-| ファイル | 概要 |
-|---|---|
-| `can_lib` | CAN 通信 |
-| `encoder` | エンコーダ |
-| `kinematics` | 運動学 |
-| `motor_driver` | モータドライバ |
-| `pid` | PID 制御 |
-| `serial_lib` | シリアル通信 |
+| ファイル | 概要 | 詳細ドキュメント |
+|---|---|---|
+| `can_lib` | CAN 通信 | [readme/can_lib.md](readme/can_lib.md) |
+| `encoder` | エンコーダ | [readme/encoder.md](readme/encoder.md) |
+| `kinematics` | 運動学 | [readme/kinematics.md](readme/kinematics.md) |
+| `motor_driver` | モータドライバ | [readme/motor_driver.md](readme/motor_driver.md) |
+| `pid` | PID 制御 | [readme/pid.md](readme/pid.md) |
+| `serial_lib` | シリアル通信 | [readme/Serial.md](readme/Serial.md) |
 
 ## 導入手順
 
@@ -48,13 +48,13 @@ Core/
 
 ### 4. CMakeLists.txt を編集
 
-`CMakeLists.txt` に以下を追記します。
+`cmake/stm32cubemx/CMakeLists.txt` を以下のように編集します。
 
 ```cmake
 # STM32CubeMX generated include paths
 set(MX_Include_Dirs
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE  # ← 追加
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F4xx_HAL_Driver/Inc
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/STM32F4xx_HAL_Driver/Inc/Legacy
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Drivers/CMSIS/Device/ST/STM32F4xx/Include
@@ -69,6 +69,7 @@ set(MX_Application_Src
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/sysmem.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Src/syscalls.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../startup_stm32f446xx.s
+    # ↓ 使うライブラリの .c を追加
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/can_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/encoder.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/kinematics.c
@@ -89,3 +90,23 @@ set(MX_Application_Src
 ```c
 #include "Altair_library_for_CubeIDE/altair.h"
 ```
+
+---
+
+## CAN 通信を使う場合の追加設定
+
+CubeMX で以下を設定しないと通信が不安定になったり止まったりします。
+
+| パラメータ | 推奨値 |
+|---|---|
+| `AutoRetransmission` | `ENABLE` |
+| `AutoBusOff` | `ENABLE` |
+| `SyncJumpWidth` | `CAN_SJW_4TQ` |
+
+詳細は [readme/can_lib.md](readme/can_lib.md) を参照してください。
+
+### ハードウェア注意事項
+
+- **終端抵抗**: バスの両端に **120Ω** が必要。ないとビットエラーが多発して通信が不安定になる。
+- **ボーレート**: 全ノードで一致していること。ボーレートの計算式は can_lib.md を参照。
+- **ACK**: バスに自分以外のノードが最低1つ存在しないと ACK エラーになり Bus-Off に至る。単体テスト時は CubeMX で `Mode = CAN_MODE_LOOPBACK` に設定する。
