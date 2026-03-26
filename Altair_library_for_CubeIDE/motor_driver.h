@@ -3,6 +3,12 @@
 
 #include "stm32f4xx_hal.h"
 
+// デフォルトのPWM周波数[Hz]
+// ユーザ側で #define MOTOR_DRIVER_DEFAULT_PWM_HZ xxx を先に定義すると上書き可能
+#ifndef MOTOR_DRIVER_DEFAULT_PWM_HZ
+#define MOTOR_DRIVER_DEFAULT_PWM_HZ 980U
+#endif
+
 typedef struct {
     TIM_HandleTypeDef* htimA;  // タイマーA
     uint32_t channelA;         // タイマーチャンネルA
@@ -16,5 +22,8 @@ void MotorDriver_Init(MotorDriver* motor, TIM_HandleTypeDef* htimA, uint32_t cha
 
 // モーターの速度を設定する関数
 void MotorDriver_setSpeed(MotorDriver* motor, int speed);
+
+// PWM 周波数を設定する関数（例: frequency_hz = 980）
+HAL_StatusTypeDef MotorDriver_setPwmFrequency(MotorDriver* motor, uint32_t frequency_hz);
 
 #endif /* MOTOR_DRIVER_H */
