@@ -20,6 +20,8 @@ CubeMXで設定後、生成されたコードが自動的に適用される。
 
 ![alt text](images/image.png)
 
+![alt text](images/3.png)
+
 ![alt text](images/image-1.png)
 
 ---
