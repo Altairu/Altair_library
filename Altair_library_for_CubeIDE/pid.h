@@ -20,10 +20,14 @@ typedef struct
     double i_control;
     double d_control;
     double time_constant;
+    double integral_limit;
+    int output_invert;
 } Pid;
 
 void Pid_Init(Pid *pid);
 void Pid_setGain(Pid *pid, double p_gain, double i_gain, double d_gain, double time_constant);
+void Pid_setGainWithLimit(Pid *pid, double p_gain, double i_gain, double d_gain, double time_constant, double integral_limit);
+void Pid_setInvert(Pid *pid, int invert);
 double Pid_control(Pid *pid, double target, double now, int control_period);
 double Pid_controlError(Pid *pid, double error, int control_period);
 void Pid_reset(Pid *pid);
