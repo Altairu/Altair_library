@@ -48,14 +48,23 @@
 
 ### デフォルト周波数を変更したい場合
 
-プロジェクト全体で「デフォルトは 1 kHz にしたい」などの場合は、
+プロジェクト全体で「デフォルトは 200 Hz にしたい」などの場合は、次のいずれかの方法を使います。
 
-```c
-#define MOTOR_DRIVER_DEFAULT_PWM_HZ 1000U
-#include "Altair_library_for_CubeIDE/altair.h"
-```
+1. **マクロで指定（ヘッダインクルード前）**
 
-のように、インクルード前に `MOTOR_DRIVER_DEFAULT_PWM_HZ` を再定義してください。
+  ```c
+  #define MOTOR_DRIVER_DEFAULT_PWM_HZ 200U
+  #include "Altair_library_for_CubeIDE/altair.h"
+  ```
+
+2. **グローバル変数で指定（どこか1つのCファイルに定義）**
+
+  ```c
+  // motor_driver.c には weak 定義
+  //   __attribute__((weak)) uint32_t g_motor_driver_default_pwm_hz = MOTOR_DRIVER_DEFAULT_PWM_HZ;
+  // があるため、ユーザ側で同名の変数を定義するとこちらが優先される。
+  uint32_t g_motor_driver_default_pwm_hz = 200U;  // 200Hz
+  ```
 
 ### ランタイムで任意の周波数に変更する
 
@@ -85,7 +94,7 @@ MotorDriver_setPwmFrequency(&motor, 980U);
 ### MotorDriver_Init
 
 **説明**  
-指定されたタイマーおよびチャンネルを用いてモータードライバを初期化します。デフォルト設定では、初期化時に PWM 周波数を `MOTOR_DRIVER_DEFAULT_PWM_HZ`（既定: 約 920 Hz）に自動調整します。
+指定されたタイマーおよびチャンネルを用いてモータードライバを初期化します。デフォルト設定では、初期化時に PWM 周波数を `g_motor_driver_default_pwm_hz`（未定義の場合は `MOTOR_DRIVER_DEFAULT_PWM_HZ`。既定: 約 980 Hz）に自動調整します。
 
 **宣言**
 ```c

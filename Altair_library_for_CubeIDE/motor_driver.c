@@ -1,5 +1,11 @@
 #include "motor_driver.h"
 
+// デフォルトPWM周波数を上書き可能なグローバル変数
+// ユーザー側で強い定義
+//   uint32_t g_motor_driver_default_pwm_hz = 200;
+// を用意すると、その値が使用される
+__attribute__((weak)) uint32_t g_motor_driver_default_pwm_hz = MOTOR_DRIVER_DEFAULT_PWM_HZ;
+
 // タイマクロックを取得する内部関数
 static uint32_t MotorDriver_GetTimerClock(TIM_HandleTypeDef *htim)
 {
@@ -97,8 +103,9 @@ void MotorDriver_Init(MotorDriver* motor, TIM_HandleTypeDef* htimA, uint32_t cha
     HAL_TIM_PWM_Start(htimB, channelB);
 
 #ifndef MOTOR_DRIVER_DISABLE_DEFAULT_PWM
-    // デフォルトで PWM 周波数を約 MOTOR_DRIVER_DEFAULT_PWM_HZ [Hz] に設定
-    MotorDriver_setPwmFrequency(motor, MOTOR_DRIVER_DEFAULT_PWM_HZ);
+    // デフォルトで PWM 周波数を g_motor_driver_default_pwm_hz [Hz] に設定
+    // 優先度: ユーザー定義変数 > MOTOR_DRIVER_DEFAULT_PWM_HZ マクロ
+    MotorDriver_setPwmFrequency(motor, g_motor_driver_default_pwm_hz);
 #endif
 }
 

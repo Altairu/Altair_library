@@ -4,7 +4,12 @@
 #include "stm32f4xx_hal.h"
 
 // デフォルトのPWM周波数[Hz]
-// ユーザ側で #define MOTOR_DRIVER_DEFAULT_PWM_HZ xxx を先に定義すると上書き可能
+// ユーザ側で
+//   #define MOTOR_DRIVER_DEFAULT_PWM_HZ xxx
+// を motor_driver.h をインクルードする前に定義すると上書き可能。
+// あるいは、Cファイルのどこかで
+//   uint32_t g_motor_driver_default_pwm_hz = xxx;
+// と強い定義を置けば、そちらが優先される。
 #ifndef MOTOR_DRIVER_DEFAULT_PWM_HZ
 #define MOTOR_DRIVER_DEFAULT_PWM_HZ 980U
 #endif
