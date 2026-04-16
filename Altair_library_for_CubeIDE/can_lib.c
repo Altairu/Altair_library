@@ -2,18 +2,41 @@
 
 // 受信データの実体（外部から参照できるようにする）
 CanRxData g_can1_rx_data = {0};
+CanRxData g_can2_rx_data = {0};
+
+CanInitConfig Can_DefaultInitConfig(CAN_HandleTypeDef *hcan) {
+    CanInitConfig config;
+
+    config.fifo_assignment = CAN_FILTER_FIFO0;
+    config.slave_start_filter_bank = 14;
+
+    if (hcan->Instance == CAN1) {
+        config.filter_bank = 0;
+    } else {
+        config.filter_bank = 14;
+    }
+
+    return config;
+}
 
 // フィルタ設定とCANの開始
-HAL_StatusTypeDef Can_Init(CAN_HandleTypeDef *hcan) {
+HAL_StatusTypeDef Can_Init(CAN_HandleTypeDef *hcan, const CanInitConfig *config) {
     CAN_FilterTypeDef filter;
+    CanInitConfig local_config;
+
+    if (config == NULL) {
+        local_config = Can_DefaultInitConfig(hcan);
+        config = &local_config;
+    }
 
     // 全てのIDを受信する設定
     filter.FilterIdHigh         = 0x0000;
     filter.FilterIdLow          = 0x0000;
     filter.FilterMaskIdHigh     = 0x0000;
     filter.FilterMaskIdLow      = 0x0000;
-    filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
-    filter.FilterBank           = 0;
+    filter.FilterFIFOAssignment = config->fifo_assignment;
+    filter.FilterBank           = config->filter_bank;
+    filter.SlaveStartFilterBank = config->slave_start_filter_bank;
     filter.FilterMode           = CAN_FILTERMODE_IDMASK;
     filter.FilterScale          = CAN_FILTERSCALE_32BIT;
     filter.FilterActivation     = CAN_FILTER_ENABLE;
@@ -54,9 +77,19 @@ HAL_StatusTypeDef Can_Transmit(CAN_HandleTypeDef *hcan, uint32_t std_id, uint8_t
 // HALの受信完了コールバックをオーバーライド
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
     CAN_RxHeaderTypeDef rx_header;
-    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, g_can1_rx_data.data) == HAL_OK) {
-        g_can1_rx_data.std_id      = rx_header.StdId;
-        g_can1_rx_data.dlc         = rx_header.DLC;
-        g_can1_rx_data.new_data_flag = 1;
+    CanRxData *target_rx_data = NULL;
+
+    if (hcan->Instance == CAN1) {
+        target_rx_data = &g_can1_rx_data;
+    } else if (hcan->Instance == CAN2) {
+        target_rx_data = &g_can2_rx_data;
+    } else {
+        return;
+    }
+
+    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, target_rx_data->data) == HAL_OK) {
+        target_rx_data->std_id        = rx_header.StdId;
+        target_rx_data->dlc           = rx_header.DLC;
+        target_rx_data->new_data_flag = 1;
     }
 }

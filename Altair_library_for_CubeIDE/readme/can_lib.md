@@ -3,6 +3,8 @@
 CAN送受信をシンプルに扱えるライブラリ。  
 メールボックスの空き待ちなどの面倒な処理はライブラリ内部で完結している。
 
+この版では **CAN1/CAN2を同時に別用途で使用可能**。
+
 ---
 
 ## CubeMX 必須設定
@@ -46,7 +48,23 @@ CubeMXで設定後、生成されたコードが自動的に適用される。
 #include "Altair_library_for_CubeIDE/can_lib.h"
 
 // MX_CAN1_Init() の後に呼ぶ
-Can_Init(&hcan1);
+Can_Init(&hcan1, NULL);  // デフォルト設定
+```
+
+CAN1/CAN2を同時に使う場合:
+
+```c
+#include "Altair_library_for_CubeIDE/can_lib.h"
+
+CanInitConfig can1_cfg = Can_DefaultInitConfig(&hcan1);
+CanInitConfig can2_cfg = Can_DefaultInitConfig(&hcan2);
+
+// 必要ならFIFOやFilterBankを用途別に調整
+// can1_cfg.filter_bank = 0;
+// can2_cfg.filter_bank = 14;
+
+Can_Init(&hcan1, &can1_cfg);
+Can_Init(&hcan2, &can2_cfg);
 ```
 
 ### 送信
@@ -65,6 +83,7 @@ Can_Transmit(&hcan1, 0x125, data, 8);
 
 ```c
 extern CanRxData g_can1_rx_data;
+extern CanRxData g_can2_rx_data;
 
 if (g_can1_rx_data.new_data_flag) {
     g_can1_rx_data.new_data_flag = 0;  // フラグをクリア
@@ -73,7 +92,21 @@ if (g_can1_rx_data.new_data_flag) {
     uint8_t  dlc = g_can1_rx_data.dlc;
     // g_can1_rx_data.data[0] ～ [dlc-1] にデータが入っている
 }
+
+if (g_can2_rx_data.new_data_flag) {
+    g_can2_rx_data.new_data_flag = 0;
+
+    uint32_t id2  = g_can2_rx_data.std_id;
+    uint8_t  dlc2 = g_can2_rx_data.dlc;
+    // g_can2_rx_data.data[0] ～ [dlc2-1] にデータが入っている
+}
 ```
+
+## デュアルCAN運用の注意
+
+- `SlaveStartFilterBank` でCAN1/CAN2のフィルタバンク領域を分割する
+- デフォルトでは `SlaveStartFilterBank=14`、CAN1はBank0、CAN2はBank14を使う
+- CubeMX側のCAN設定（特にビットタイミング・AutoRetransmission・AutoBusOff）は従来通り必須
 
 ---
 
