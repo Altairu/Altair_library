@@ -1,7 +1,4 @@
 #include "encoder.h"
-#include "serial_lib.h"
-
-uint32_t lastTime = 0; // 初期値を定数に設定
 
 #define TIMER_MAX_COUNT 65535                                                                      // タイマーの最大値（16ビットタイマーの場合65535)
 void Encoder_Init(Encoder *encoder, TIM_HandleTypeDef *htim, double diameter, int ppr, int period) // periodはms
@@ -13,6 +10,7 @@ void Encoder_Init(Encoder *encoder, TIM_HandleTypeDef *htim, double diameter, in
     encoder->limit = 0;
     encoder->before_rot = 0.0;
     encoder->before_deg = 0.0;
+    encoder->last_time = 0;
 
     encoder->htim->Init.Prescaler = 0;
     encoder->htim->Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -61,15 +59,15 @@ void Encoder_Interrupt(Encoder *encoder, EncoderData *encoder_data)
     encoder_data->rot = encoder_data->count / (double)encoder->ppr;
     encoder_data->deg = encoder_data->rot * 360.0;
     encoder_data->distance = encoder_data->rot * (PI * encoder->diameter);
-    encoder_data->velocity = encoder_data->rps * PI * encoder->diameter;
 
-    if (HAL_GetTick() - lastTime >= encoder->period)
+    if (HAL_GetTick() - encoder->last_time >= (uint32_t)encoder->period)
     {
-        lastTime = HAL_GetTick();
-        encoder_data->rps = (encoder_data->rot - encoder->before_rot) * 1000 / (encoder->period);
+        encoder_data->rps = (encoder_data->rot - encoder->before_rot) * 1000.0 / encoder->period;
+        encoder_data->velocity = encoder_data->rps * PI * encoder->diameter;
 
         encoder->before_rot = encoder_data->rot;
         encoder->before_deg = encoder_data->deg;
+        encoder->last_time = HAL_GetTick();
     }
 }
 

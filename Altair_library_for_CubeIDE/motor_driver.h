@@ -25,8 +25,11 @@ typedef struct {
 void MotorDriver_Init(MotorDriver* motor, TIM_HandleTypeDef* htimA, uint32_t channelA,
                       TIM_HandleTypeDef* htimB, uint32_t channelB);
 
-// モーターの速度を設定する関数
+// モーターの速度を設定する関数（-100〜100）
 void MotorDriver_setSpeed(MotorDriver* motor, int speed);
+
+// モーターをブレーキ停止する関数（両ch High = ショートブレーキ）
+void MotorDriver_Stop(MotorDriver* motor);
 
 // PWM 周波数を設定する関数（例: frequency_hz = 980）
 HAL_StatusTypeDef MotorDriver_setPwmFrequency(MotorDriver* motor, uint32_t frequency_hz);

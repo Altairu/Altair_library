@@ -25,6 +25,7 @@ typedef struct
     int limit;
     double before_rot;
     double before_deg;
+    uint32_t last_time;      // 速度計算用タイムスタンプ（複数インスタンス対応）
 } Encoder;
 
 void Encoder_Init(Encoder *encoder, TIM_HandleTypeDef *htim, double diameter, int ppr, int period);

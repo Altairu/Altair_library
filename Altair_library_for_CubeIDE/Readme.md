@@ -8,10 +8,12 @@ STM32CubeIDE (CMake プロジェクト) 向けライブラリです。
 |---|---|---|
 | `can_lib` | CAN 通信 | [readme/can_lib.md](readme/can_lib.md) |
 | `encoder` | エンコーダ | [readme/encoder.md](readme/encoder.md) |
+| `gpio_lib` | GPIO/PWM ユーティリティ | [readme/gpio_lib.md](readme/gpio_lib.md) |
 | `kinematics` | 運動学 | [readme/kinematics.md](readme/kinematics.md) |
 | `motor_driver` | モータドライバ | [readme/motor_driver.md](readme/motor_driver.md) |
 | `pid` | PID 制御 | [readme/pid.md](readme/pid.md) |
 | `serial_lib` | シリアル通信 | [readme/Serial.md](readme/Serial.md) |
+| `usart_lib` | USART 通信ユーティリティ | [readme/usart_lib.md](readme/usart_lib.md) |
 
 ## 導入手順
 
@@ -38,10 +40,12 @@ Core/
         ├── altair.h
         ├── can_lib.h / can_lib.c
         ├── encoder.h / encoder.c
+        ├── gpio_lib.h / gpio_lib.c
         ├── kinematics.h / kinematics.c
         ├── motor_driver.h / motor_driver.c
         ├── pid.h / pid.c
-        └── serial_lib.h / serial_lib.c
+        ├── serial_lib.h / serial_lib.c
+        └── usart_lib.h / usart_lib.c
 ```
 
 ![配置](images/３.png)
@@ -72,10 +76,12 @@ set(MX_Application_Src
     # ↓ 使うライブラリの .c を追加
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/can_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/encoder.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/gpio_lib.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/kinematics.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/motor_driver.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/pid.c
     ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/serial_lib.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../Core/Inc/Altair_library_for_CubeIDE/usart_lib.c
 )
 ```
 

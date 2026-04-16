@@ -126,6 +126,13 @@ void MotorDriver_setSpeed(MotorDriver *motor, int speed) {
     }
 }
 
+// ショートブレーキ（両ch をフル Duty に設定）
+void MotorDriver_Stop(MotorDriver *motor) {
+    uint32_t arr = __HAL_TIM_GET_AUTORELOAD(motor->htimA);
+    __HAL_TIM_SET_COMPARE(motor->htimA, motor->channelA, arr);
+    __HAL_TIM_SET_COMPARE(motor->htimB, motor->channelB, arr);
+}
+
 // MotorDriver で使用するタイマの PWM 周波数を設定する関数
 // 例: MotorDriver_setPwmFrequency(&motor, 980);  // 約 980 Hz に設定
 HAL_StatusTypeDef MotorDriver_setPwmFrequency(MotorDriver *motor, uint32_t frequency_hz)

@@ -7,10 +7,11 @@
 
 ## 1. 概要
 
-`serial_lib`ライブラリは、UART経由でのデータ通信を容易に行うためのライブラリです。以下の機能を提供しています。
+`serial_lib`ライブラリは、USART経由でのデータ通信を容易に行うためのライブラリです。以下の機能を提供しています。
 - 2バイトのヘッダ付きデータパケットの送信
 - ヘッダ付きデータパケットの受信とデータの整列
 - データ数が可変のため、柔軟なデータパケットを作成可能
+- 組み込み向けに固定バッファを使用（ヒープ未使用）
 
 ---
 
@@ -30,10 +31,10 @@
 
 ### 2.3 初期化
 
-シリアル通信を初期化するには、UARTハンドルを`Serial_Init`に渡します。
+シリアル通信を初期化するには、USARTハンドルを`Serial_Init`に渡します。
 
 ```c
-UART_HandleTypeDef huart2;
+USART_HandleTypeDef huart2;
 Serial_Init(&huart2);
 ```
 
@@ -44,28 +45,35 @@ Serial_Init(&huart2);
 ### 3.1 `Serial_Init`
 
 ```c
-void Serial_Init(UART_HandleTypeDef *huart);
+void Serial_Init(USART_HandleTypeDef *huart);
 ```
 
-**説明**: UARTを使ってシリアル通信を行うための初期設定を行います。
+**説明**: `serial_lib`内部で使うハンドル引数の形式を統一するための関数です。CubeMX生成コードでUSART初期化済みである前提のため、追加初期化は行いません。
 
 **パラメータ**
-- `huart`: UARTのハンドルポインタ
+- `huart`: USARTのハンドルポインタ
+
+**補足**
+- 初期化処理は `MX_USARTx_UART_Init()` 側で実行してください。
 
 ---
 
 ### 3.2 `Serial_SendData`
 
 ```c
-void Serial_SendData(UART_HandleTypeDef *huart, int16_t *data, uint8_t data_count);
+void Serial_SendData(USART_HandleTypeDef *huart, int16_t *data, uint8_t data_count);
 ```
 
-**説明**: データ数に応じて指定された`data`を、ヘッダ付きでUARTから送信します。
+**説明**: データ数に応じて指定された`data`を、ヘッダ付きでUSARTから送信します。
 
 **パラメータ**
-- `huart`: UARTのハンドルポインタ
+- `huart`: USARTのハンドルポインタ
 - `data`: 送信したいデータ配列
 - `data_count`: 送信するデータの数（データの要素数）
+
+**制約**
+- `data_count` は最大 `SERIAL_MAX_DATA_COUNT`（既定値16）までです。
+- 上限を超える場合は内部で16にクリップされます。
 
 **使用例**
 
@@ -81,15 +89,19 @@ Serial_SendData(&huart2, data_to_send, 3);
 ### 3.3 `Serial_ReceiveData`
 
 ```c
-uint8_t Serial_ReceiveData(UART_HandleTypeDef *huart, int16_t *data, uint8_t data_count);
+uint8_t Serial_ReceiveData(USART_HandleTypeDef *huart, int16_t *data, uint8_t data_count);
 ```
 
-**説明**: UARTからデータを受信します。ヘッダを確認し、正しい形式であればデータを`data`配列に格納します。
+**説明**: USARTからデータを受信します。ヘッダを確認し、正しい形式であればデータを`data`配列に格納します。
 
 **パラメータ**
-- `huart`: UARTのハンドルポインタ
+- `huart`: USARTのハンドルポインタ
 - `data`: 受信データを格納する配列
 - `data_count`: 期待するデータの数（配列要素数）
+
+**制約**
+- `data_count` は最大 `SERIAL_MAX_DATA_COUNT`（既定値16）までです。
+- 上限を超える場合は内部で16にクリップされます。
 
 **戻り値**
 - `1`: 正常にデータを受信した場合
