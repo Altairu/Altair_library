@@ -11,7 +11,6 @@ typedef struct {
     uint32_t std_id;         // スタンダードID
     uint8_t  data[8];        // データ本体
     uint8_t  dlc;            // データ長
-    uint8_t  new_data_flag;  // 受信完了フラグ（読み取り後に0クリアすること）
 } CanRxData;
 
 // 初期化パラメータ（デュアルCAN時のフィルタ割り当て用）
@@ -21,8 +20,22 @@ typedef struct {
     uint32_t slave_start_filter_bank; // デュアルCAN時の分割開始バンク（単体CAN時は無視）
 } CanInitConfig;
 
-extern CanRxData g_can1_rx_data;
-extern CanRxData g_can2_rx_data;
+// 受信キューの深さ（2のべき乗でなくてもよい）
+#define CAN_RX_QUEUE_SIZE  32
+
+// 受信キュー（割り込みが書き込み側、メインループが読み出し側の単一生産者/単一消費者リングバッファ）
+typedef struct {
+    CanRxData         buf[CAN_RX_QUEUE_SIZE];
+    volatile uint16_t head;            // 次に書き込む位置（割り込みのみ更新）
+    volatile uint16_t tail;            // 次に読み出す位置（メインループのみ更新）
+    volatile uint32_t overflow_count;  // キュー満杯で破棄したフレーム数
+} CanRxQueue;
+
+extern CanRxQueue g_can1_rx_queue;
+extern CanRxQueue g_can2_rx_queue;
+
+// 受信キューから1フレーム取り出す（取り出せたら1、空なら0を返す）
+uint8_t Can_Receive(CanRxQueue *queue, CanRxData *out);
 
 // 関数プロトタイプ
 HAL_StatusTypeDef Can_Init(CAN_HandleTypeDef *hcan, const CanInitConfig *config);

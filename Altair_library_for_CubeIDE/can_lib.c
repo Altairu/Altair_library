@@ -1,8 +1,21 @@
 #include "can_lib.h"
 
-// 受信データの実体（外部から参照できるようにする）
-CanRxData g_can1_rx_data = {0};
-CanRxData g_can2_rx_data = {0};
+// 受信キューの実体（外部から参照できるようにする）
+CanRxQueue g_can1_rx_queue = {0};
+CanRxQueue g_can2_rx_queue = {0};
+
+// キューから1フレーム取り出す（メインループ側で呼ぶ）
+uint8_t Can_Receive(CanRxQueue *queue, CanRxData *out) {
+    uint16_t tail = queue->tail;
+
+    if (tail == queue->head) {
+        return 0;
+    }
+
+    *out = queue->buf[tail];
+    queue->tail = (uint16_t)((tail + 1U) % CAN_RX_QUEUE_SIZE);
+    return 1;
+}
 
 CanInitConfig Can_DefaultInitConfig(CAN_HandleTypeDef *hcan) {
     CanInitConfig config;
@@ -77,19 +90,41 @@ HAL_StatusTypeDef Can_Transmit(CAN_HandleTypeDef *hcan, uint32_t std_id, uint8_t
 // HALの受信完了コールバックをオーバーライド
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
     CAN_RxHeaderTypeDef rx_header;
-    CanRxData *target_rx_data = NULL;
+    uint8_t rx_buf[8];
+    CanRxQueue *queue = NULL;
 
     if (hcan->Instance == CAN1) {
-        target_rx_data = &g_can1_rx_data;
+        queue = &g_can1_rx_queue;
     } else if (hcan->Instance == CAN2) {
-        target_rx_data = &g_can2_rx_data;
+        queue = &g_can2_rx_queue;
     } else {
         return;
     }
 
-    if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, target_rx_data->data) == HAL_OK) {
-        target_rx_data->std_id        = rx_header.StdId;
-        target_rx_data->dlc           = rx_header.DLC;
-        target_rx_data->new_data_flag = 1;
+    // FIFOに残っているフレームを可能な限りキューへ移す
+    // キューが満杯でもFIFOを空けるため、必ず読み出す
+    while (HAL_CAN_GetRxFifoFillLevel(hcan, CAN_RX_FIFO0) > 0U) {
+        if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, rx_buf) != HAL_OK) {
+            break;
+        }
+
+        uint16_t head = queue->head;
+        uint16_t next = (uint16_t)((head + 1U) % CAN_RX_QUEUE_SIZE);
+
+        if (next == queue->tail) {
+            // キュー満杯：このフレームは破棄してカウントだけ残す
+            queue->overflow_count++;
+            continue;
+        }
+
+        CanRxData *slot = &queue->buf[head];
+        slot->std_id = rx_header.StdId;
+        slot->dlc    = rx_header.DLC;
+        for (uint8_t i = 0; i < 8; i++) {
+            slot->data[i] = rx_buf[i];
+        }
+
+        // データ書き込み後にheadを進める（メイン側はheadを見てから読む）
+        queue->head = next;
     }
 }

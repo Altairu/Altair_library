@@ -107,7 +107,7 @@ CubeMX で以下を設定しないと通信が不安定になったり止まっ�
 |---|---|
 | `AutoRetransmission` | `ENABLE` |
 | `AutoBusOff` | `ENABLE` |
-| `SyncJumpWidth` | `CAN_SJW_4TQ` |
+| `SyncJumpWidth` | `CAN_SJW_2TQ` |
 
 詳細は [readme/can_lib.md](readme/can_lib.md) を参照してください。
 

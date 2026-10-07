@@ -15,7 +15,7 @@ CAN送受信をシンプルに扱えるライブラリ。
 |---|---|---|
 | `AutoRetransmission` | `ENABLE` | エラー時に自動再送。フレームが黙って捨てられなくなる |
 | `AutoBusOff` | `ENABLE` | Bus-Off 状態からハードウェアが自動復帰する |
-| `SyncJumpWidth` | `CAN_SJW_4TQ` | ノード間のクロックずれ許容量を増やして安定性向上 |
+| `SyncJumpWidth` | `CAN_SJW_2TQ` | ノード間のクロックずれを吸収する再同期幅 |
 
 CubeMXで設定後、生成されたコードが自動的に適用される。
 以下のように設定する
@@ -34,7 +34,7 @@ CubeMXで設定後、生成されたコードが自動的に適用される。
 ボーレート = APB1クロック ÷ (Prescaler × (1 + TimeSeg1 + TimeSeg2))
 
 デフォルト設定例（HSI 168MHz、APB1 = 42MHz）:
-- Prescaler=3, BS1=11TQ, BS2=2TQ → **1Mbps**
+- Prescaler=2, BS1=16TQ, BS2=4TQ, SJW=2TQ → **1Mbps**
 
 相手ノードのボーレートと一致していること。
 
@@ -79,28 +79,23 @@ Can_Transmit(&hcan1, 0x125, data, 8);
 
 ### 受信
 
-受信は割り込みで自動処理される。`g_can1_rx_data` を参照する。
+受信は割り込みで自動処理され、リングバッファのキューに積まれる。`CAN_RX_QUEUE_SIZE` は32で、32スロット確保して最大31フレーム保持する。メインループで `Can_Receive` を使って取り出す。
 
 ```c
-extern CanRxData g_can1_rx_data;
-extern CanRxData g_can2_rx_data;
+extern CanRxQueue g_can1_rx_queue;
+extern CanRxQueue g_can2_rx_queue;
 
-if (g_can1_rx_data.new_data_flag) {
-    g_can1_rx_data.new_data_flag = 0;  // フラグをクリア
+CanRxData rx;
 
-    uint32_t id  = g_can1_rx_data.std_id;
-    uint8_t  dlc = g_can1_rx_data.dlc;
-    // g_can1_rx_data.data[0] ～ [dlc-1] にデータが入っている
-}
-
-if (g_can2_rx_data.new_data_flag) {
-    g_can2_rx_data.new_data_flag = 0;
-
-    uint32_t id2  = g_can2_rx_data.std_id;
-    uint8_t  dlc2 = g_can2_rx_data.dlc;
-    // g_can2_rx_data.data[0] ～ [dlc2-1] にデータが入っている
+// キューが空になるまで取り出す
+while (Can_Receive(&g_can1_rx_queue, &rx)) {
+    uint32_t id  = rx.std_id;
+    uint8_t  dlc = rx.dlc;
+    // rx.data[0] ～ [dlc-1] にデータが入っている
 }
 ```
+
+キューが満杯のときに届いたフレームは破棄され、`overflow_count` が加算される。
 
 ## デュアルCAN運用の注意
 
